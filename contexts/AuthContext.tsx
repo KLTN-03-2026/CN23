@@ -13,6 +13,8 @@ type User = {
   membershipType?: string;
   membershipExpireDate?: string;
   totalHoursPlayed?: number;
+  walletBalance?: number;
+  rank?: string;
 } | null;
 
 type AuthContextType = {

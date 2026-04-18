@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, Calendar, History, User, Settings, LogOut, ChevronRight, Activity, Save } from 'lucide-react';
+import { Clock, Calendar, History, User, Settings, LogOut, ChevronRight, Activity, Save, Wallet, Star, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { getRankLabel, getRankColor } from '@/lib/rank';
 
 export default function CustomerDashboard() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -14,6 +15,8 @@ export default function CustomerDashboard() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loadingRes, setLoadingRes] = useState(false);
   const [loadingAct, setLoadingAct] = useState(false);
+  const [walletTransactions, setWalletTransactions] = useState<any[]>([]);
+  const [loadingWallet, setLoadingWallet] = useState(false);
   
   // Profile state
   const [profileName, setProfileName] = useState('');
@@ -151,6 +154,25 @@ export default function CustomerDashboard() {
     }
   }, [user, activeTab]);
 
+  // Fetch wallet transactions
+  useEffect(() => {
+    if (user && activeTab === 'wallet') {
+      const fetchWalletTransactions = async () => {
+        setLoadingWallet(true);
+        try {
+          const res = await fetch('/api/wallet/transactions');
+          const data = await res.json();
+          setWalletTransactions(data.transactions || []);
+        } catch (error) {
+          console.error('Failed to fetch wallet transactions', error);
+        } finally {
+          setLoadingWallet(false);
+        }
+      };
+      fetchWalletTransactions();
+    }
+  }, [user, activeTab]);
+
   if (authLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -185,10 +207,14 @@ export default function CustomerDashboard() {
               </div>
               <div>
                 <h3 className="font-bold text-white">{user.name}</h3>
-                <p className="text-sm text-zinc-400">Thành viên Tiêu chuẩn</p>
+                <p className="text-sm" style={{ color: getRankColor(user.rank || 'Bronze') }}>{getRankLabel(user.rank || 'Bronze')}</p>
               </div>
             </div>
             <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+                <span className="text-sm text-zinc-400">Số dư ví</span>
+                <span className="font-bold text-emerald-400">{(user.walletBalance || 0).toLocaleString('vi-VN')}đ</span>
+              </div>
               <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
                 <span className="text-sm text-zinc-400">Số giờ đã chơi</span>
                 <span className="font-bold text-white">{user.totalHoursPlayed || 0} giờ</span>
@@ -198,8 +224,10 @@ export default function CustomerDashboard() {
                 <span className="font-bold text-amber-400">{user.points || 0} điểm</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">Hạng thẻ</span>
-                <span className="font-bold text-zinc-300">{user.membershipType || 'Thành viên Tiêu chuẩn'}</span>
+                <span className="text-sm text-zinc-400">Hạng thành viên</span>
+                <span className="font-bold" style={{ color: getRankColor(user.rank || 'Bronze') }}>
+                  {getRankLabel(user.rank || 'Bronze')}
+                </span>
               </div>
             </div>
           </div>
@@ -222,6 +250,12 @@ export default function CustomerDashboard() {
               className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'profile' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white'}`}
             >
               <Settings className={`h-5 w-5 ${activeTab === 'profile' ? 'text-amber-400' : ''}`} /> Cài đặt tài khoản
+            </button>
+            <button 
+              onClick={() => setActiveTab('wallet')}
+              className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'wallet' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-white'}`}
+            >
+              <Wallet className={`h-5 w-5 ${activeTab === 'wallet' ? 'text-emerald-400' : ''}`} /> Ví của tôi
             </button>
             <button 
               onClick={logout}
@@ -456,6 +490,86 @@ export default function CustomerDashboard() {
                 </div>
               </form>
             </div>
+          )}
+
+          {activeTab === 'wallet' && (
+            <>
+              {/* Wallet Balance Card */}
+              <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 to-zinc-900/50 p-6">
+                <div className="mb-2 flex items-center gap-2 text-emerald-400">
+                  <Wallet className="h-5 w-5" />
+                  <span className="text-sm font-medium">Số dư ví</span>
+                </div>
+                <p className="text-4xl font-black text-white">{(user.walletBalance || 0).toLocaleString('vi-VN')}đ</p>
+                <p className="mt-2 text-xs text-zinc-500">Liên hệ quầy để nạp thêm tiền vào ví</p>
+              </div>
+
+              {/* Rank Progress */}
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
+                <h2 className="mb-4 text-xl font-bold text-white flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-amber-400" /> Hạng thành viên
+                </h2>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full border-2" style={{ borderColor: getRankColor(user.rank || 'Bronze') }}>
+                    <Star className="h-8 w-8" style={{ color: getRankColor(user.rank || 'Bronze') }} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: getRankColor(user.rank || 'Bronze') }}>
+                      {getRankLabel(user.rank || 'Bronze')}
+                    </p>
+                    <p className="text-sm text-zinc-400">{user.points || 0} điểm tích lũy</p>
+                  </div>
+                </div>
+                <div className="rounded-lg bg-zinc-800/50 p-4">
+                  <p className="text-xs text-zinc-400 mb-2">Quy đổi: Mỗi 10.000đ hóa đơn = 1 điểm</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between"><span style={{ color: '#CD7F32' }}>🥉 Đồng</span><span className="text-zinc-500">0+ điểm</span></div>
+                    <div className="flex justify-between"><span style={{ color: '#C0C0C0' }}>🥈 Bạc</span><span className="text-zinc-500">100+ điểm</span></div>
+                    <div className="flex justify-between"><span style={{ color: '#FFD700' }}>🥇 Vàng</span><span className="text-zinc-500">500+ điểm</span></div>
+                    <div className="flex justify-between"><span style={{ color: '#B9F2FF' }}>💎 Kim Cương</span><span className="text-zinc-500">1000+ điểm</span></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Wallet Transaction History */}
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-6">
+                <h2 className="mb-4 text-xl font-bold text-white flex items-center gap-2">
+                  <History className="h-5 w-5 text-amber-400" /> Lịch sử giao dịch ví
+                </h2>
+                {loadingWallet ? (
+                  <div className="flex justify-center py-6">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-amber-400 border-t-transparent"></div>
+                  </div>
+                ) : walletTransactions.length > 0 ? (
+                  <div className="space-y-3">
+                    {walletTransactions.map((tx: any) => (
+                      <div key={tx._id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${tx.type === 'topup' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                            {tx.type === 'topup' ? <TrendingUp className="h-5 w-5" /> : <Wallet className="h-5 w-5" />}
+                          </div>
+                          <div>
+                            <p className="font-medium text-white">{tx.description}</p>
+                            <p className="text-xs text-zinc-500">{new Date(tx.createdAt).toLocaleDateString('vi-VN')} - {new Date(tx.createdAt).toLocaleTimeString('vi-VN')}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-bold ${tx.type === 'topup' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {tx.type === 'topup' ? '+' : '-'}{tx.amount.toLocaleString('vi-VN')}đ
+                          </p>
+                          <p className="text-xs text-zinc-500">Sau: {tx.balanceAfter.toLocaleString('vi-VN')}đ</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-700 bg-zinc-800/20 py-8 text-center">
+                    <Wallet className="mb-3 h-10 w-10 text-zinc-600" />
+                    <p className="text-sm text-zinc-500">Chưa có giao dịch ví nào.</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

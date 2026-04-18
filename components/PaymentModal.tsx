@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Clock, Trash2, QrCode, CreditCard, Banknote, Tag, CheckCircle2, Search, User } from 'lucide-react';
+import { X, Clock, Trash2, QrCode, CreditCard, Banknote, Tag, CheckCircle2, Search, User, Wallet } from 'lucide-react';
 import Image from 'next/image';
 
 interface PaymentModalProps {
@@ -13,7 +13,8 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ isOpen, onClose, tableData, sessionData, onCheckoutSuccess }: PaymentModalProps) {
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qr' | 'card'>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'qr' | 'card' | 'wallet'>('cash');
+  const [walletError, setWalletError] = useState('');
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -118,6 +119,7 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
 
       if (res.ok) {
         setIsSuccess(true);
+        setWalletError('');
         setTimeout(() => {
           setIsSuccess(false);
           if (onCheckoutSuccess) {
@@ -127,7 +129,11 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
           }
         }, 2000);
       } else {
-        console.error('Checkout failed');
+        const errData = await res.json();
+        if (paymentMethod === 'wallet') {
+          setWalletError(errData.message || 'Số dư ví không đủ');
+        }
+        console.error('Checkout failed:', errData.message);
       }
     } catch (error) {
       console.error('Checkout error:', error);
@@ -348,9 +354,9 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
             {/* Payment Methods */}
             <div className="mb-auto">
               <label className="mb-3 block text-sm font-medium text-zinc-400">Phương thức thanh toán</label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
-                  onClick={() => setPaymentMethod('cash')}
+                  onClick={() => { setPaymentMethod('cash'); setWalletError(''); }}
                   className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
                     paymentMethod === 'cash' 
                       ? 'border-amber-400 bg-amber-400/10 text-amber-400' 
@@ -361,7 +367,7 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
                   <span className="text-xs font-medium">Tiền mặt</span>
                 </button>
                 <button
-                  onClick={() => setPaymentMethod('qr')}
+                  onClick={() => { setPaymentMethod('qr'); setWalletError(''); }}
                   className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
                     paymentMethod === 'qr' 
                       ? 'border-amber-400 bg-amber-400/10 text-amber-400' 
@@ -372,7 +378,7 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
                   <span className="text-xs font-medium">Mã QR</span>
                 </button>
                 <button
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => { setPaymentMethod('card'); setWalletError(''); }}
                   className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
                     paymentMethod === 'card' 
                       ? 'border-amber-400 bg-amber-400/10 text-amber-400' 
@@ -380,9 +386,42 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
                   }`}
                 >
                   <CreditCard className="h-6 w-6" />
-                  <span className="text-xs font-medium">Thẻ tín dụng/Ghi nợ</span>
+                  <span className="text-xs font-medium">Thẻ ngân hàng</span>
+                </button>
+                <button
+                  onClick={() => { setPaymentMethod('wallet'); setWalletError(''); }}
+                  disabled={!customer}
+                  className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 transition-all ${
+                    paymentMethod === 'wallet' 
+                      ? 'border-emerald-400 bg-emerald-400/10 text-emerald-400' 
+                      : !customer 
+                        ? 'border-white/5 bg-black/10 text-zinc-600 cursor-not-allowed'
+                        : 'border-white/10 bg-black/20 text-zinc-400 hover:border-white/30 hover:text-white'
+                  }`}
+                >
+                  <Wallet className="h-6 w-6" />
+                  <span className="text-xs font-medium">Ví nội bộ</span>
                 </button>
               </div>
+
+              {/* Wallet Info */}
+              {paymentMethod === 'wallet' && customer && (
+                <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-zinc-400">Số dư ví</span>
+                    <span className={`font-bold ${(customer.walletBalance || 0) >= grandTotal ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {(customer.walletBalance || 0).toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                  {(customer.walletBalance || 0) < grandTotal && (
+                    <p className="text-xs text-red-400 mt-1">⚠ Số dư không đủ. Cần thêm {(grandTotal - (customer.walletBalance || 0)).toLocaleString('vi-VN')}đ</p>
+                  )}
+                  {walletError && <p className="text-xs text-red-400 mt-1">❌ {walletError}</p>}
+                </div>
+              )}
+              {paymentMethod === 'wallet' && !customer && (
+                <p className="mt-3 text-xs text-amber-400">⚠ Vui lòng tìm kiếm khách hàng trước khi dùng ví nội bộ</p>
+              )}
 
               {/* QR Code Display */}
               {paymentMethod === 'qr' && (

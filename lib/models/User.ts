@@ -10,6 +10,8 @@ const UserSchema = new mongoose.Schema({
   totalHoursPlayed: { type: Number, default: 0 },
   membershipType: { type: String, default: 'Thành viên Tiêu chuẩn' },
   membershipExpireDate: { type: Date },
+  walletBalance: { type: Number, default: 0 },
+  rank: { type: String, enum: ['Bronze', 'Silver', 'Gold', 'Diamond'], default: 'Bronze' },
 }, { timestamps: true });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);

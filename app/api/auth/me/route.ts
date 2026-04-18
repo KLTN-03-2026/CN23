@@ -34,7 +34,9 @@ export async function GET(req: Request) {
         points: user.points,
         membershipType: user.membershipType,
         membershipExpireDate: user.membershipExpireDate,
-        totalHoursPlayed: user.totalHoursPlayed
+        totalHoursPlayed: user.totalHoursPlayed,
+        walletBalance: user.walletBalance,
+        rank: user.rank
       } 
     });
   } catch (error) {

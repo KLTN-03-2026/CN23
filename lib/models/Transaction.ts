@@ -24,7 +24,8 @@ const TransactionSchema: Schema = new Schema({
   customerName: { type: String, default: 'Khách lẻ' },
   customerId: { type: Schema.Types.ObjectId, ref: 'User' },
   totalAmount: { type: Number, required: true },
-  paymentMethod: { type: String, required: true, enum: ['cash', 'qr', 'card'] },
+  paymentMethod: { type: String, required: true, enum: ['cash', 'qr', 'card', 'wallet'] },
+  pointsEarned: { type: Number, default: 0 },
   status: { type: String, required: true, enum: ['success', 'refunded'], default: 'success' },
   items: [{
     name: { type: String, required: true },
