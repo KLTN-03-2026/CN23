@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Table, Coffee, Settings, LogOut, CircleDot, Calculator, CalendarCheck, Receipt, Users } from 'lucide-react';
+import { LayoutDashboard, Table, Coffee, Settings, LogOut, CircleDot, Calculator, CalendarCheck, Receipt, Users, BarChart3 } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -13,6 +13,7 @@ export default function Sidebar() {
     { name: 'Thanh toán', href: '/admin/pos', icon: Calculator },
     { name: 'Quản lý Đặt bàn', href: '/admin/reservations', icon: CalendarCheck },
     { name: 'Quản lý Giao dịch', href: '/admin/transactions', icon: Receipt },
+    { name: 'Báo cáo doanh thu', href: '/admin/reports', icon: BarChart3 },
     { name: 'Quản lý Khách hàng', href: '/admin/users', icon: Users },
     { name: 'Quản lý Bàn', href: '/admin/tables', icon: Table },
     { name: 'Quản lý Thực đơn', href: '/admin/menu', icon: Coffee },
