@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Coffee, Beer, Pizza, Star, Crown, Diamond } from 'lucide-react';
@@ -10,6 +10,22 @@ import CheckoutModal from '@/components/CheckoutModal';
 export default function Home() {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<{name: string, durationMonths: number, price: number} | null>(null);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch('/api/menu');
+        if (res.ok) {
+          const data = await res.json();
+          setMenuItems(data.menuItems || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch menu:', error);
+      }
+    };
+    fetchMenu();
+  }, []);
 
   const handleBuyPackage = (pkg: {name: string, durationMonths: number, price: number}) => {
     setSelectedPackage(pkg);
@@ -272,18 +288,18 @@ export default function Home() {
         </motion.div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { name: 'Cà phê sữa đá', price: '35.000đ', icon: Coffee },
-            { name: 'Bia Heineken', price: '40.000đ', icon: Beer },
-            { name: 'Mì xào bò', price: '55.000đ', icon: Pizza },
-            { name: 'Nước suối', price: '15.000đ', icon: Coffee },
-            { name: 'Bò húc', price: '25.000đ', icon: Coffee },
-            { name: 'Trà đào cam sả', price: '45.000đ', icon: Coffee },
-            { name: 'Cơm chiên hải sản', price: '65.000đ', icon: Pizza },
-            { name: 'Trái cây dĩa', price: '80.000đ', icon: Pizza },
-          ].map((item, i) => (
+          {(menuItems.length > 0 ? menuItems : [
+            { _id: '1', name: 'Cà phê sữa đá', price: 35000 },
+            { _id: '2', name: 'Bia Heineken', price: 40000 },
+            { _id: '3', name: 'Mì xào bò', price: 55000 },
+            { _id: '4', name: 'Nước suối', price: 15000 },
+            { _id: '5', name: 'Bò húc', price: 25000 },
+            { _id: '6', name: 'Trà đào cam sả', price: 45000 },
+            { _id: '7', name: 'Cơm chiên hải sản', price: 65000 },
+            { _id: '8', name: 'Trái cây dĩa', price: 80000 },
+          ]).map((item: any, i: number) => (
             <motion.div 
-              key={i} 
+              key={item._id || i} 
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
@@ -292,11 +308,11 @@ export default function Home() {
               className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 hover:border-zinc-700 cursor-pointer"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-amber-400">
-                <item.icon className="h-6 w-6" />
+                <Coffee className="h-6 w-6" />
               </div>
               <div>
                 <h4 className="font-bold text-zinc-200">{item.name}</h4>
-                <p className="text-sm font-medium text-amber-400">{item.price}</p>
+                <p className="text-sm font-medium text-amber-400">{(item.price || 0).toLocaleString('vi-VN')}đ</p>
               </div>
             </motion.div>
           ))}

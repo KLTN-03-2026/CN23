@@ -33,32 +33,23 @@ const orderItemDeclaration: FunctionDeclaration = {
   },
 };
 
-const systemInstruction = `Bạn là trợ lý ảo AI của Luxe Bida - Câu lạc bộ Billiards sang trọng bậc nhất.
-Nhiệm vụ của bạn là tư vấn cho khách hàng về bảng giá, dịch vụ, hỗ trợ đặt bàn và gọi món.
-Bảng giá:
-- Bàn Thường: 80.000đ/giờ (Bàn Pool tiêu chuẩn, cơ cá nhân cơ bản, phục vụ nước suối miễn phí)
-- Bàn VIP: 120.000đ/giờ (Bàn thi đấu quốc tế, khu vực riêng tư sofa lounge, cơ carbon cao cấp, nhân viên phục vụ riêng)
-- Phòng Super VIP: 200.000đ/giờ (Phòng lạnh riêng biệt, hệ thống âm thanh TV riêng, tủ rượu vang & cigar, trợ lý AI phân tích trận đấu)
-
-Thực đơn F&B cơ bản:
-- Cà phê sữa đá: 35.000đ
-- Bia Heineken: 40.000đ
-- Mì xào bò: 55.000đ
-- Nước suối: 15.000đ
-- Bò húc (Redbull): 25.000đ
-- Trà đào cam sả: 45.000đ
-
-Khi khách hàng muốn đặt bàn, hãy hỏi đầy đủ thông tin: Tên, Số điện thoại, Thời gian, Loại bàn. Sau đó gọi hàm bookTable.
-Khi khách hàng muốn gọi món (ví dụ: "cho tôi cà phê sữa đá bàn 10"), hãy xác định tên bàn, tên món và số lượng, sau đó gọi hàm orderItem.
-Luôn trả lời lịch sự, chuyên nghiệp và ngắn gọn.`;
+const checkTablesDeclaration: FunctionDeclaration = {
+  name: "checkAvailableTables",
+  description: "Kiểm tra các bàn đang trống để khách hàng xem trước khi đặt.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {},
+  },
+};
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'model', text: string, parts?: any[] }[]>([
-    { role: 'model', text: 'Xin chào! Tôi là trợ lý ảo của Luxe Bida. Tôi có thể giúp gì cho bạn hôm nay?', parts: [{ text: 'Xin chào! Tôi là trợ lý ảo của Luxe Bida. Tôi có thể giúp gì cho bạn hôm nay?' }] }
+    { role: 'model', text: 'Xin chào! Tôi là trợ lý ảo AI của Luxe Bida 🎱 Tôi có thể giúp bạn đặt bàn, xem bảng giá, gọi món và kiểm tra bàn trống. Bạn cần gì?', parts: [{ text: 'Xin chào! Tôi là trợ lý ảo AI của Luxe Bida 🎱 Tôi có thể giúp bạn đặt bàn, xem bảng giá, gọi món và kiểm tra bàn trống. Bạn cần gì?' }] }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [menuData, setMenuData] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -68,6 +59,60 @@ export default function Chatbot() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Fetch real menu data from DB on mount
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        const res = await fetch('/api/menu');
+        if (res.ok) {
+          const data = await res.json();
+          setMenuData(data.menuItems || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch menu for chatbot:', error);
+      }
+    };
+    fetchMenu();
+  }, []);
+
+  // Build dynamic system instruction with real menu data
+  const getSystemInstruction = () => {
+    let menuText = 'Thực đơn F&B (từ cơ sở dữ liệu):\n';
+    if (menuData.length > 0) {
+      menuData.forEach(item => {
+        menuText += `- ${item.name}: ${item.price.toLocaleString('vi-VN')}đ\n`;
+      });
+    } else {
+      menuText += `- Cà phê sữa đá: 35.000đ\n- Bia Heineken: 40.000đ\n- Mì xào bò: 55.000đ\n- Nước suối: 15.000đ\n- Bò húc (Redbull): 25.000đ\n- Trà đào cam sả: 45.000đ\n`;
+    }
+
+    return `Bạn là trợ lý ảo AI của Luxe Bida - Câu lạc bộ Billiards sang trọng bậc nhất.
+Nhiệm vụ của bạn là tư vấn cho khách hàng về bảng giá, dịch vụ, hỗ trợ đặt bàn, gọi món và kiểm tra bàn trống.
+
+Bảng giá giờ chơi:
+- Bàn Thường: 80.000đ/giờ (Bàn Pool tiêu chuẩn, cơ cá nhân cơ bản, phục vụ nước suối miễn phí)
+- Bàn VIP: 120.000đ/giờ (Bàn thi đấu quốc tế, khu vực riêng tư sofa lounge, cơ carbon cao cấp, nhân viên phục vụ riêng)
+- Phòng Super VIP: 200.000đ/giờ (Phòng lạnh riêng biệt, hệ thống âm thanh TV riêng, tủ rượu vang & cigar, trợ lý AI phân tích trận đấu)
+
+${menuText}
+
+Gói thành viên:
+- Thẻ Bạc (1 Tháng): 500.000đ — Giảm 10% tiền giờ, tích điểm x1
+- Thẻ Vàng (6 Tháng): 2.500.000đ — Giảm 20% tiền giờ, tích điểm x2
+- Thẻ Kim Cương (1 Năm): 4.500.000đ — Giảm 30% tiền giờ, tích điểm x3
+
+Hệ thống tích điểm:
+- Mỗi 10.000đ hóa đơn = 1 điểm
+- 100+ điểm = Hạng Bạc (Silver)
+- 500+ điểm = Hạng Vàng (Gold)  
+- 1000+ điểm = Hạng Kim Cương (Diamond)
+
+Khi khách hàng muốn đặt bàn, hãy hỏi đầy đủ: Tên, Số điện thoại, Thời gian, Loại bàn. Sau đó gọi hàm bookTable.
+Khi khách hàng muốn gọi món, hãy xác định tên bàn, tên món và số lượng, sau đó gọi hàm orderItem.
+Khi khách hàng muốn xem bàn trống, gọi hàm checkAvailableTables.
+Luôn trả lời lịch sự, chuyên nghiệp và ngắn gọn. Dùng emoji phù hợp để sinh động hơn.`;
+  };
 
   const handleSend = async (text: string) => {
     if (!text.trim()) return;
@@ -102,20 +147,19 @@ export default function Chatbot() {
       }));
 
       let response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: apiMessages,
         config: {
-          systemInstruction,
-          tools: [{ functionDeclarations: [bookTableDeclaration, orderItemDeclaration] }],
+          systemInstruction: getSystemInstruction(),
+          tools: [{ functionDeclarations: [bookTableDeclaration, orderItemDeclaration, checkTablesDeclaration] }],
         },
       });
 
       if (response.functionCalls && response.functionCalls.length > 0) {
         const call = response.functionCalls[0];
+        
         if (call.name === "bookTable") {
           const args = call.args as any;
-          
-          // Call our backend API to save the reservation
           const res = await fetch('/api/reservations', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -124,24 +168,19 @@ export default function Chatbot() {
           
           if (!res.ok) {
             const errorData = await res.json().catch(() => ({}));
-            setMessages([...currentMessages, { role: 'model', text: `Xin lỗi, có lỗi xảy ra khi đặt bàn: ${errorData.error || 'Vui lòng thử lại sau.'}` }]);
+            setMessages([...currentMessages, { role: 'model', text: `❌ Xin lỗi, có lỗi xảy ra khi đặt bàn: ${errorData.error || 'Vui lòng thử lại sau.'}` }]);
             setIsLoading(false);
             return;
           }
           
           const reservationData = await res.json();
-
-          // Instead of passing complex function objects back to the model,
-          // we just append a simple text message indicating success.
-          const successMessage = `Đã đặt bàn thành công! Mã đặt bàn của bạn là: ${reservationData.reservation?._id || '123'}. Bạn có cần hỗ trợ gì thêm không?`;
+          const successMessage = `✅ Đặt bàn thành công!\n\n📋 **Thông tin đặt bàn:**\n- Mã đặt bàn: ${reservationData.reservation?._id?.substring(0, 8) || '---'}\n- Tên: ${args.customerName}\n- SĐT: ${args.phone}\n- Thời gian: ${args.time}\n- Loại bàn: ${args.tableType}\n\nQuý khách vui lòng đến đúng giờ. Chúc quý khách có trải nghiệm tuyệt vời! 🎱`;
           
           setMessages([...currentMessages, { role: 'model', text: successMessage }]);
           setIsLoading(false);
           return;
         } else if (call.name === "orderItem") {
           const args = call.args as any;
-          
-          // Call our backend API to order item
           const res = await fetch('/api/pos/order-from-bot', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -151,14 +190,48 @@ export default function Chatbot() {
           const data = await res.json();
           
           if (!res.ok) {
-            setMessages([...currentMessages, { role: 'model', text: `Xin lỗi, không thể gọi món: ${data.error || 'Vui lòng thử lại sau.'}` }]);
+            setMessages([...currentMessages, { role: 'model', text: `❌ Không thể gọi món: ${data.error || 'Vui lòng thử lại sau.'}` }]);
             setIsLoading(false);
             return;
           }
           
-          const successMessage = `Dạ vâng, Luxe Bida đã ghi nhận yêu cầu của quý khách tại ${data.order.tableName}: **${data.order.quantity} ${data.order.itemName}** (${data.order.price.toLocaleString('vi-VN')}đ). Nhân viên sẽ mang đến ngay cho quý khách. Chúc quý khách có những đường cơ thật chuẩn xác!`;
+          const successMessage = `✅ Đã ghi nhận yêu cầu!\n\n🍽️ **${data.order.quantity}x ${data.order.itemName}**\n💰 ${data.order.price.toLocaleString('vi-VN')}đ\n📍 ${data.order.tableName}\n\nNhân viên sẽ mang đến ngay. Chúc quý khách có những đường cơ thật chuẩn xác! 🎯`;
           
           setMessages([...currentMessages, { role: 'model', text: successMessage }]);
+          setIsLoading(false);
+          return;
+        } else if (call.name === "checkAvailableTables") {
+          // Fetch real table status from DB
+          try {
+            const res = await fetch('/api/tables');
+            if (res.ok) {
+              const tablesData = await res.json();
+              const tables = tablesData.tables || [];
+              const emptyTables = tables.filter((t: any) => t.status === 'empty');
+              const playingTables = tables.filter((t: any) => t.status === 'playing');
+              
+              let tableMsg = `📊 **Tình trạng bàn hiện tại:**\n\n`;
+              tableMsg += `✅ **Bàn trống (${emptyTables.length}):**\n`;
+              if (emptyTables.length > 0) {
+                emptyTables.forEach((t: any) => {
+                  tableMsg += `  • ${t.name} (${t.type}) — ${t.pricePerHour?.toLocaleString('vi-VN') || '---'}đ/h\n`;
+                });
+              } else {
+                tableMsg += `  Hiện không có bàn trống\n`;
+              }
+              tableMsg += `\n🔴 **Đang chơi (${playingTables.length}):**\n`;
+              playingTables.forEach((t: any) => {
+                tableMsg += `  • ${t.name} (${t.type})\n`;
+              });
+              tableMsg += `\nBạn muốn đặt bàn nào? 🎱`;
+              
+              setMessages([...currentMessages, { role: 'model', text: tableMsg }]);
+            } else {
+              setMessages([...currentMessages, { role: 'model', text: '❌ Lỗi khi kiểm tra bàn. Vui lòng thử lại sau.' }]);
+            }
+          } catch (error) {
+            setMessages([...currentMessages, { role: 'model', text: '❌ Lỗi kết nối. Vui lòng thử lại sau.' }]);
+          }
           setIsLoading(false);
           return;
         }
@@ -181,7 +254,7 @@ export default function Chatbot() {
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {isOpen ? (
-        <div className="flex h-[500px] w-[350px] flex-col overflow-hidden rounded-2xl border border-emerald-500/30 bg-zinc-950/95 shadow-[0_0_30px_rgba(52,211,153,0.15)] backdrop-blur-xl sm:w-[400px]">
+        <div className="flex h-[520px] w-[360px] flex-col overflow-hidden rounded-2xl border border-emerald-500/30 bg-zinc-950/95 shadow-[0_0_30px_rgba(52,211,153,0.15)] backdrop-blur-xl sm:w-[400px]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-emerald-500/20 bg-zinc-900/50 px-4 py-3">
             <div className="flex items-center gap-3">
@@ -190,8 +263,8 @@ export default function Chatbot() {
                 <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-zinc-950 bg-emerald-500"></span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-zinc-100">Trợ lý ảo AI</h3>
-                <p className="text-xs text-emerald-400">Trực tuyến</p>
+                <h3 className="text-sm font-bold text-zinc-100">Luxe AI Assistant</h3>
+                <p className="text-xs text-emerald-400">● Trực tuyến</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} className="text-zinc-400 hover:text-zinc-100">
@@ -208,7 +281,7 @@ export default function Chatbot() {
                     <Bot className="h-5 w-5 text-emerald-400" />
                   </div>
                 )}
-                <div className={`rounded-2xl px-4 py-2 text-sm ${
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line ${
                   msg.role === 'user' 
                     ? 'bg-emerald-500 text-zinc-950 rounded-tr-sm' 
                     : 'bg-zinc-800 text-zinc-200 rounded-tl-sm'
@@ -244,6 +317,13 @@ export default function Chatbot() {
               🎯 Đặt bàn
             </button>
             <button 
+              onClick={() => handleSend('Xem bàn trống')}
+              disabled={isLoading}
+              className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
+            >
+              📋 Bàn trống
+            </button>
+            <button 
               onClick={() => handleSend('Xem bảng giá')}
               disabled={isLoading}
               className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
@@ -251,18 +331,18 @@ export default function Chatbot() {
               💰 Bảng giá
             </button>
             <button 
-              onClick={() => handleSend('Xem menu đồ uống')}
+              onClick={() => handleSend('Xem thực đơn F&B')}
               disabled={isLoading}
               className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
             >
-              🍹 Xem menu
+              🍹 Thực đơn
             </button>
             <button 
-              onClick={() => handleSend('Địa chỉ quán ở đâu?')}
+              onClick={() => handleSend('Tôi muốn biết về các gói thành viên')}
               disabled={isLoading}
               className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
             >
-              📍 Địa chỉ
+              👑 Gói TV
             </button>
           </div>
 
@@ -290,9 +370,9 @@ export default function Chatbot() {
       ) : (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-zinc-950 shadow-[0_0_20px_rgba(52,211,153,0.5)] transition-transform hover:scale-110"
+          className="group flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-zinc-950 shadow-[0_0_20px_rgba(52,211,153,0.5)] transition-all hover:scale-110 hover:shadow-[0_0_30px_rgba(52,211,153,0.7)]"
         >
-          <MessageSquare className="h-6 w-6" />
+          <MessageSquare className="h-6 w-6 transition-transform group-hover:scale-110" />
         </button>
       )}
     </div>

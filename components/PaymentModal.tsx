@@ -152,9 +152,17 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
   
   const durationInHours = diffMs / (1000 * 60 * 60);
   
-  // Apply membership logic: if customer has membership, table fee is 0
+  // Apply membership discount based on tier
   const hasMembership = customer && customer.membershipType && customer.membershipType !== 'Thành viên Tiêu chuẩn';
-  const timeTotal = hasMembership ? 0 : Math.round(durationInHours * tableData.pricePerHour);
+  const membershipDiscountPercent = hasMembership
+    ? customer.membershipType.includes('Kim Cương') ? 30
+      : customer.membershipType.includes('Vàng') ? 20
+      : customer.membershipType.includes('Bạc') ? 10
+      : 0
+    : 0;
+  const rawTimeTotal = Math.round(durationInHours * tableData.pricePerHour);
+  const membershipDiscount = Math.round(rawTimeTotal * membershipDiscountPercent / 100);
+  const timeTotal = rawTimeTotal - membershipDiscount;
   
   const fbItems = safeSessionData.orders || [];
   const fbTotal = fbItems.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
@@ -227,7 +235,7 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
                   </div>
                   {hasMembership && (
                     <span className="rounded bg-emerald-500/20 px-2 py-1 text-xs font-bold text-emerald-400">
-                      Miễn phí tiền bàn
+                      Giảm {membershipDiscountPercent}% tiền bàn
                     </span>
                   )}
                 </div>
@@ -254,10 +262,14 @@ export default function PaymentModal({ isOpen, onClose, tableData, sessionData, 
                 </div>
                 <div>
                   <p className="text-zinc-500">Thành tiền giờ</p>
-                  <p className={`font-bold ${hasMembership ? 'text-emerald-400 line-through' : 'text-white'}`}>
-                    {Math.round(durationInHours * tableData.pricePerHour).toLocaleString('vi-VN')}đ
-                  </p>
-                  {hasMembership && <p className="text-xs font-bold text-emerald-400">0đ (Gói thành viên)</p>}
+                  {hasMembership ? (
+                    <div>
+                      <p className="font-bold text-zinc-500 line-through text-xs">{rawTimeTotal.toLocaleString('vi-VN')}đ</p>
+                      <p className="font-bold text-emerald-400">{timeTotal.toLocaleString('vi-VN')}đ <span className="text-xs font-normal">(-{membershipDiscountPercent}%)</span></p>
+                    </div>
+                  ) : (
+                    <p className="font-bold text-white">{rawTimeTotal.toLocaleString('vi-VN')}đ</p>
+                  )}
                 </div>
               </div>
             </div>

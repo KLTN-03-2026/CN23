@@ -21,7 +21,8 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const role = email === 'admin@gmail.com' || name.toLowerCase() === 'admin' ? 'admin' : 'user';
+    // Security: All registrations are 'user' role. Admin accounts are created via seed-admin.mjs only.
+    const role = 'user';
 
     const user = await User.create({
       name,
